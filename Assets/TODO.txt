@@ -1,0 +1,25 @@
+﻿
+*Ground Collisions
+Horizontal (Walls) Collision
+Ceiling Collision
+
+Spring-like reaction to hitting ground
+Smooth Stepping over small obstacles
+Limit Walking up slopes to a max slope
+
+Movement dynamics
+ smooth acceleration that is still responsive
+  starting to walk
+  starting sprint
+  slowing down
+
+ walking up slopes slower
+ reaction to running into walls?
+ ground differences (slippery ice, sticky ground)
+
+
+Ducking
+
+Air Control (no air control by default, or air control if desired)
+
+Walking up stairs should have the player be constantly "Grounded" and their velocity should follow the stair slope so that jumping works normally (ie. stairs should act like a ramp even though theyre not)
