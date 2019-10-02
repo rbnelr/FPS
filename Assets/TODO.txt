@@ -1,7 +1,7 @@
 ﻿
 *Ground Collisions
-Horizontal (Walls) Collision
-Ceiling Collision
+*Horizontal (Walls) Collision
+*Ceiling Collision
 
 Spring-like reaction to hitting ground
 Smooth Stepping over small obstacles

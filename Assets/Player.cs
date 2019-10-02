@@ -104,9 +104,11 @@ public class Player : MonoBehaviour {
 		// Drag
 		vel += normalizesafe(vel) * -Drag(length(speed)) * dt;
 		
-		float3 accel = (vel - (float3)Rigidbody.velocity) * 100f;
-		accel = normalizesafe(accel) * min(length(accel), 100f);
-		Rigidbody.AddForce(accel, ForceMode.Acceleration);
+		Rigidbody.velocity = vel;
+
+		//float3 accel = (vel - (float3)Rigidbody.velocity) * 100f;
+		//accel = normalizesafe(accel) * min(length(accel), 100f);
+		//Rigidbody.AddForce(accel, ForceMode.Acceleration);
 
 		// Jumping
 		if (jump && IsGrounded) {
