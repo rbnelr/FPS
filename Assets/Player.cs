@@ -10,8 +10,22 @@ public class Player : MonoBehaviour {
 	public Animator			Animator;
 	public CapsuleCollider	CapsuleCollider;
 	
+	float3 pos;
+	float3 vel = 0;
+	quaternion ori;
+	
+	float3 up => mul(ori, float3(0,1,0));
+
+	float3 TransformPoint (float3 p) => mul(ori, p) + pos;
+	float3 TransformDirection (float3 p) => mul(ori, p);
+	
+	bool IsGrounded;
+	bool IsWalking => IsGrounded && length(vel) > 0.1f;
+
 	public float MaxSpeed = 4f;
 	public float SprintMultiplier = 1.8f;
+
+	public float JumpForce = 10f;
 
 	public float TerminalVel = 40;
 
@@ -33,14 +47,12 @@ public class Player : MonoBehaviour {
 		return f * accel;
 	}
 
-	bool GroundCollision (ref float3 standing_pos, bool gizmos=false) {
-		float3 up = transform.up.normalized;
-
-		float3 p1 = transform.TransformPoint(float3(0, GroundCastOffset, 0));
+	void GroundCollision (bool gizmos=false) {
+		float3 p1 = TransformPoint(float3(0, GroundCastOffset, 0));
 		float dist = GroundCastDist + GroundCastOffset;
 
 		if (gizmos) Gizmos.DrawWireSphere(p1, GroundCastRadius);
-		if (gizmos) Gizmos.DrawWireSphere(transform.TransformPoint(float3(0, GroundCastOffset - dist, 0)), GroundCastRadius);
+		if (gizmos) Gizmos.DrawWireSphere(TransformPoint(float3(0, GroundCastOffset - dist, 0)), GroundCastRadius);
 
 		var hits = Physics.SphereCastAll(p1, GroundCastRadius, -up, dist);
 
@@ -60,19 +72,28 @@ public class Player : MonoBehaviour {
 			}
 		}
 
-		if (closest_dist < float.PositiveInfinity) {
-			standing_pos = closest;
-			return true;
+		IsGrounded = closest_dist < float.PositiveInfinity;
+		if (IsGrounded) {
+			float3 standing_pos = closest;
+			
+			float3 ground_pen = pos - standing_pos;
+			float ground_pen_dist = dot(ground_pen, -up);
+			ground_pen = ground_pen_dist * up;
+
+			IsGrounded = ground_pen_dist >= -0.01f;
+			if (IsGrounded) { // small bias to prevent vibrating just above ground
+				pos += ground_pen;
+				vel -= up * min(dot(vel, up), 0);
+			}
 		}
-		return false;
 	}
-	float3 HorizCollision (bool gizmos=false) {
-		float3 p1 = transform.TransformPoint((float3)CapsuleCollider.center - float3(0, CapsuleCollider.height/2 - CapsuleCollider.radius, 0));
-		float3 p2 = transform.TransformPoint((float3)CapsuleCollider.center + float3(0, CapsuleCollider.height/2 - CapsuleCollider.radius, 0));
+	void HorizCollision (bool gizmos=false) {
+		float3 p1 = TransformPoint((float3)CapsuleCollider.center - float3(0, CapsuleCollider.height/2 - CapsuleCollider.radius, 0));
+		float3 p2 = TransformPoint((float3)CapsuleCollider.center + float3(0, CapsuleCollider.height/2 - CapsuleCollider.radius, 0));
 
-		if (gizmos) Gizmos.DrawWireSphere(transform.TransformPoint(CapsuleCollider.center), 0.02f);
-
-		float3 totalDepen = 0;
+		if (gizmos) Gizmos.DrawWireSphere(TransformPoint(CapsuleCollider.center), 0.02f);
+		
+		float3 depen = 0;
 
 		var colliders = Physics.OverlapCapsule(p1, p2, CapsuleCollider.radius);
 		foreach (var coll in colliders) {
@@ -80,40 +101,35 @@ public class Player : MonoBehaviour {
 
 			Debug.Assert(coll.attachedRigidbody == null); // only against static colliders for now
 
-			if (Physics.ComputePenetration(CapsuleCollider, CapsuleCollider.transform.position, CapsuleCollider.transform.rotation,
+			if (Physics.ComputePenetration(CapsuleCollider, pos, ori,
 				coll, coll.transform.position, coll.transform.rotation, out Vector3 dir, out float dist)) {
 
-				if (gizmos) Gizmos.DrawLine(transform.TransformPoint(CapsuleCollider.center), transform.TransformPoint(CapsuleCollider.center) + dir * dist);
+				if (gizmos) Gizmos.DrawLine(TransformPoint(CapsuleCollider.center), TransformPoint(CapsuleCollider.center) + (float3)dir * dist);
 
-				totalDepen += (float3)dir * dist;
+				depen += (float3)dir * dist;
 			}
 		}
-
-		return totalDepen;
+		
+		float3 depen_dir = normalizesafe(depen);
+				
+		pos += depen;
+		vel -= -depen_dir * max(dot(vel, -depen_dir), 0);
 	}
 
 	void OnDrawGizmos () {
 		Gizmos.color = Color.green;
-		float3 standing_pos = default;
-		GroundCollision(ref standing_pos, true);
+		//float3 standing_pos = default;
+		//GroundCollision(true);
 
 		Gizmos.color = Color.red;
-		HorizCollision(true);
+		//HorizCollision(true);
 	}
-
-	public float JumpForce = 10f;
-
-	float3 vel = 0;
-	
-	bool IsGrounded;
-	bool IsWalking => IsGrounded && length(vel) > 0.1f;
 
 	void Update () {
 		float dt = Time.deltaTime;
-		float3 up = transform.up.normalized; // is this already normalized ?
-
-		//return;
-
+		pos = transform.position;
+		ori = transform.rotation;
+		
 		Mouselook();
 
 		float3 move_dir = 0;
@@ -125,42 +141,18 @@ public class Player : MonoBehaviour {
 		bool jump = Input.GetKeyDown(KeyCode.Space);
 		bool crouch = Input.GetKey(KeyCode.LeftControl);
 		
+		//move_dir.z = +1;
+
 		// Planar Movement
 		move_dir = normalizesafe(move_dir);
-		move_dir = transform.TransformDirection(move_dir);
+		move_dir = TransformDirection(move_dir);
 
 		float3 target_vel = move_dir * MaxSpeed * (sprint ? SprintMultiplier : 1);
 		
 		if (IsGrounded) {
 			vel = float3(target_vel.x, vel.y, target_vel.z);
 		}
-
-		// Find Grounding Collision
-		float3 standing_pos = default;
-		IsGrounded = GroundCollision(ref standing_pos);
-
-		// Grounding Response
-		if (IsGrounded) {
-			float3 ground_pen = (float3)transform.position - standing_pos;
-			float ground_pen_dist = dot(ground_pen, -up);
-			ground_pen = ground_pen_dist * up;
-
-			IsGrounded = ground_pen_dist >= -0.01f;
-			if (IsGrounded) { // small bias to prevent vibrating just above ground
-				transform.position += (Vector3)ground_pen;
-				vel -= up * dot(vel, up);
-			}
-		}
 		
-		// Handle Other Collisions
-		float3 depen = HorizCollision();
-		float3 depen_dir = normalizesafe(depen);
-
-		transform.position += (Vector3)depen * 0.9f;
-		vel -= -depen_dir * max(dot(vel, -depen_dir), 0);
-
-		Debug.Log("transform.position: "+ transform.position +" vel: "+ vel);
-
 		//
 		float speed = length(vel);
 		float3 vel_dir = normalizesafe(vel);
@@ -178,8 +170,19 @@ public class Player : MonoBehaviour {
 			vel.y += JumpForce;
 		}
 
-		transform.position += (Vector3)(vel * dt);
+		//// Update position with velocity
+		pos += vel * dt;
 
+		//// Now find collisions and handle them
+		HorizCollision();
+		GroundCollision();
+
+		//
+		transform.position = pos;
+
+		Debug.Log("pos: "+ pos +" vel: "+ vel);
+
+		//
 		Animator.SetBool("isWalking", IsWalking);
 	}
 
@@ -208,6 +211,8 @@ public class Player : MonoBehaviour {
 			Gun		 .transform.localEulerAngles = float3(MouselookAng.y, 0, 0);
 			FpsCamera.transform.localEulerAngles = float3(MouselookAng.y, 0, 0);
 			transform.localEulerAngles			 = float3(0, MouselookAng.x, 0);
+
+			ori = transform.rotation;
 		}
 	}
 	#endregion
