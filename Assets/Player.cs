@@ -7,7 +7,8 @@ using System.Collections.Generic;
 public class Player : MonoBehaviour {
 
 	public GameObject		Gun;
-	public Camera			FpsCamera;
+	public GameObject		FpsCamera;
+	public GameObject		TpsCamera;
 	public Animator			Animator;
 	public CapsuleCollider	CapsuleCollider;
 	public Rigidbody		Rigidbody;
@@ -24,10 +25,14 @@ public class Player : MonoBehaviour {
 	public float SprintMultiplier = 1.8f;
 
 	public float JumpForce = 10f;
+	[Range(0f, 1f)]
+	public float AirControlFraction = 0.1f;
 
 	public float TerminalVel = 40;
 
 	public float MaxGroundAngle = 45;
+
+	public bool Firstperson = true;
 
 	float Drag (float speed) { // Drag is equal to gravity at TerminalVel to enforce TerminalVel
 		float accel = Physics.gravity.magnitude;
@@ -39,6 +44,7 @@ public class Player : MonoBehaviour {
 
 	private void FixedUpdate () {
 		IsGrounded = false;
+		Rigidbody.useGravity = !IsGrounded;
 	}
 	
 	List<ContactPoint> _colls = new List<ContactPoint>();
@@ -52,14 +58,23 @@ public class Player : MonoBehaviour {
 
 			IsGrounded = IsGrounded || ground_ang < radians(MaxGroundAngle);
 		}
+
+		Rigidbody.useGravity = !IsGrounded;
 	}
 	private void OnCollisionEnter (Collision collision) => Collision(collision);
 	private void OnCollisionStay (Collision collision) => Collision(collision);
+
+	Camera ActiveCamera => (Firstperson ? FpsCamera : TpsCamera).GetComponentInChildren<Camera>();
 
 	void Update () {
 		float dt = Time.deltaTime;
 		vel = Rigidbody.velocity;
 		
+		if (Input.GetKeyDown(KeyCode.F))
+			Firstperson = !Firstperson;
+		FpsCamera.SetActive(Firstperson);
+		TpsCamera.SetActive(!Firstperson);
+
 		Mouselook();
 
 		float3 move_dir = 0;
@@ -77,9 +92,10 @@ public class Player : MonoBehaviour {
 
 		float3 target_vel = move_dir * MaxSpeed * (sprint ? SprintMultiplier : 1);
 		
-		if (IsGrounded) {
-			vel = float3(target_vel.x, vel.y, target_vel.z);
-		}
+		float control = 1f;
+		if (!IsGrounded)
+			control *= AirControlFraction;
+		vel = lerp(vel, float3(target_vel.x, vel.y, target_vel.z), control);
 		
 		//
 		float speed = length(vel);
@@ -87,23 +103,17 @@ public class Player : MonoBehaviour {
 
 		// Drag
 		vel += normalizesafe(vel) * -Drag(length(speed)) * dt;
-
-		// Gravity
-		if (!IsGrounded) {
-			vel += (float3)Physics.gravity * dt;
-		}
+		
+		float3 accel = (vel - (float3)Rigidbody.velocity) * 100f;
+		accel = normalizesafe(accel) * min(length(accel), 100f);
+		Rigidbody.AddForce(accel, ForceMode.Acceleration);
 
 		// Jumping
 		if (jump && IsGrounded) {
-			vel.y += JumpForce;
+			Rigidbody.AddForce(transform.up * JumpForce, ForceMode.VelocityChange);
 		}
-		
-		// Update position with velocity
-		//CapsuleCollider.vel = vel * dt;
-		
-		Rigidbody.AddForce((Vector3)vel - Rigidbody.velocity, ForceMode.VelocityChange);
 
-		Debug.Log("pos: "+ pos +" vel: "+ vel);
+		Debug.Log("pos: "+ pos +" vel: "+ (float3)Rigidbody.velocity);
 
 		//
 		Animator.SetBool("isWalking", IsWalking);
@@ -135,7 +145,7 @@ public class Player : MonoBehaviour {
 		Cursor.visible = !MouselookActive;
 		
 		if (MouselookActive) {
-			float mouseMult = MouselookSensitiviy * FpsCamera.fieldOfView / 2;
+			float mouseMult = MouselookSensitiviy * ActiveCamera.fieldOfView / 2;
 			MouselookAng += mouseMult * float2(Input.GetAxisRaw("Mouse X"), -Input.GetAxisRaw("Mouse Y"));
 			MouselookAng.x = fmod(MouselookAng.x, 360f);
 			MouselookAng.y = clamp(MouselookAng.y, -90 + LookDownLimit, +90 - LookUpLimit);
