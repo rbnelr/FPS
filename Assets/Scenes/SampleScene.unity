@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 705507994}
-  m_IndirectSpecularColor: {r: 0.18386742, g: 0.22902422, b: 0.3031733, a: 1}
+  m_IndirectSpecularColor: {r: 0.183867, g: 0.22902337, b: 0.30317196, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -869,14 +869,12 @@ MonoBehaviour:
   FpsCamera: {fileID: 247944830}
   Animator: {fileID: 341151431}
   CapsuleCollider: {fileID: 341151433}
+  Rigidbody: {fileID: 341151434}
   MaxSpeed: 4
   SprintMultiplier: 1.8
+  JumpForce: 8
   TerminalVel: 40
   MaxGroundAngle: 45
-  GroundCastOffset: 1.16
-  GroundCastDist: 0.2
-  GroundCastRadius: 0.14
-  JumpForce: 8
   MouselookSensitiviy: 0.05
   LookDownLimit: 5
   LookUpLimit: 5
@@ -916,13 +914,29 @@ CapsuleCollider:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 341151429}
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 13400000, guid: 2a9abd83468b95c4c98d685ab8dddd8c, type: 2}
   m_IsTrigger: 0
   m_Enabled: 1
   m_Radius: 0.28
-  m_Height: 1.2
+  m_Height: 1.8
   m_Direction: 1
-  m_Center: {x: 0, y: 1.2, z: 0}
+  m_Center: {x: 0, y: 0.9, z: 0}
+--- !u!54 &341151434
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 341151429}
+  serializedVersion: 2
+  m_Mass: 1
+  m_Drag: 0
+  m_AngularDrag: 0.05
+  m_UseGravity: 0
+  m_IsKinematic: 0
+  m_Interpolate: 0
+  m_Constraints: 112
+  m_CollisionDetection: 3
 --- !u!1 &344086007
 GameObject:
   m_ObjectHideFlags: 0
@@ -8762,22 +8776,22 @@ PrefabInstance:
     - target: {fileID: -927199367670048503, guid: 8948e8d5cc4008a4ca5f8bf863409944,
         type: 3}
       propertyPath: m_Layer
-      value: 8
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -4216859302048453862, guid: 8948e8d5cc4008a4ca5f8bf863409944,
         type: 3}
       propertyPath: m_LocalPosition.x
-      value: 2.205
+      value: 8.9
       objectReference: {fileID: 0}
     - target: {fileID: -4216859302048453862, guid: 8948e8d5cc4008a4ca5f8bf863409944,
         type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.008
+      value: 0.319
       objectReference: {fileID: 0}
     - target: {fileID: -4216859302048453862, guid: 8948e8d5cc4008a4ca5f8bf863409944,
         type: 3}
       propertyPath: m_LocalPosition.z
-      value: 11.695
+      value: -4.77
       objectReference: {fileID: 0}
     - target: {fileID: -4216859302048453862, guid: 8948e8d5cc4008a4ca5f8bf863409944,
         type: 3}
@@ -19756,7 +19770,7 @@ Transform:
   m_GameObject: {fileID: 1834685701}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 1.58, y: 0.5, z: 12.5}
-  m_LocalScale: {x: 7.4312, y: 1, z: 1}
+  m_LocalScale: {x: 7.4312, y: 1.392, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 3

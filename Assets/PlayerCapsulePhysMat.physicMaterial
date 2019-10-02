@@ -6,9 +6,9 @@ PhysicMaterial:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Ice
-  dynamicFriction: 0.05
-  staticFriction: 0.05
+  m_Name: PlayerCapsulePhysMat
+  dynamicFriction: 0.01
+  staticFriction: 0.01
   bounciness: 0
-  frictionCombine: 0
-  bounceCombine: 0
+  frictionCombine: 1
+  bounceCombine: 1
