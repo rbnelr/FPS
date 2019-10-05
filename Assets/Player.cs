@@ -24,9 +24,8 @@ public class Player : MonoBehaviour {
 	public float MaxSpeed = 10f;
 	public float WalkMultiplier = 0.4f;
 
-	public float BaseAccel = 200f;
+	public float MaxAccel = 90f;
 	public float AirControlAccel = 15f;
-	public AnimationCurve AccelCurve;
 
 	public float JumpVel = 10f;
 
@@ -34,6 +33,10 @@ public class Player : MonoBehaviour {
 
 	public float MaxGroundAngle = 45;
 	public AnimationCurve GroundAngleWalkSpeed;
+
+	public float Radius = 0.28f;
+	public float Height = 1.8f;
+	public float LegHeight = 0.0f;
 
 	public bool Firstperson = true;
 
@@ -56,12 +59,89 @@ public class Player : MonoBehaviour {
 	float3 _accel = 0;
 
 	private void FixedUpdate () {
-		// NOTE: using IsGrounded from Collision checks of prev frame, ie. 1 frane lag, solution would be to use LateFixedUpdate but that does not exist
-		Rigidbody.useGravity = !IsGrounded;
 
-		GroundNormal = IsGrounded ? normalizesafe(avgGroundNormal) : 0;
+		Legs();
 
+		//// NOTE: using IsGrounded from Collision checks of prev frame, ie. 1 frane lag, solution would be to use LateFixedUpdate but that does not exist
+		//Rigidbody.useGravity = !IsGrounded;
 		//
+		//GroundNormal = IsGrounded ? normalizesafe(avgGroundNormal) : 0;
+
+		Running();
+	}
+
+	void Legs (bool gizmos=false) {
+		float dist = LegHeight + Radius + 0.05f;
+
+		float3 sphere = transform.TransformPoint(float3(0, dist, 0));
+
+		if (gizmos) Gizmos.color = Color.green;
+		if (gizmos) Gizmos.DrawWireSphere(sphere, Radius);
+
+		float nearest = float.PositiveInfinity;
+		float ground_pos = 0;
+		float ground_vel = 0;
+		float3 ground_normal = 0;
+
+		var hits = Physics.SphereCastAll(sphere, Radius, -transform.up, dist);
+		foreach (var hit in hits) {
+			if (hit.collider == CapsuleCollider) continue;
+			
+			if (gizmos) Gizmos.color = Color.green;
+			if (gizmos) Gizmos.DrawWireSphere(hit.point, 0.03f);
+			if (gizmos) Gizmos.DrawLine(hit.point, hit.point + hit.normal * 0.1f);
+			
+			float hit_y = transform.InverseTransformPoint(hit.point).y;
+
+			if (hit.distance < nearest && hit_y > -0.2f) {
+				nearest = hit.distance;
+				ground_pos = hit_y;
+				ground_pos = hit_y;
+				ground_normal = hit.normal;
+
+				float3 hit_vel = (float3?)hit.rigidbody?.velocity ?? 0;
+				float3 rel_vel = hit_vel - (float3)Rigidbody.velocity;
+
+				ground_vel = dot(rel_vel, ground_normal); // velocity normal to ground
+			}
+		}
+		
+		bool on_ground = nearest < float.PositiveInfinity;
+
+		float ground_ang = dot(ground_normal, transform.up);
+		ground_ang = acos(saturate(ground_ang)); // saturate to prevent NaN due to float error
+			
+		bool gound_too_steep = ground_ang > radians(MaxGroundAngle);
+
+		float spring_F = 0;
+
+		if (on_ground && !gound_too_steep) {
+
+			//float max_spring_F = gound_too_steep ? length(Physics.gravity)/2 : 40;
+
+			float spring_k = 30f;
+			float spring_damping = 0.05f;
+			spring_F = spring_k * ground_pos + spring_damping * ground_vel / Time.fixedDeltaTime;
+
+			//spring_F = min(spring_F, max_spring_F);
+
+			Rigidbody.AddForce(transform.up * spring_F, ForceMode.Acceleration);
+		}
+		
+		IsGrounded = on_ground && !gound_too_steep;
+		GroundNormal = IsGrounded ? ground_normal : 0;
+		
+		Debug.Log(
+			"IsGrounded: "+ IsGrounded +
+			"  ground_pos: "+ ground_pos +
+			"  ground_vel: "+ ground_vel +
+			"  spring_F: "+ spring_F
+			);
+
+		Rigidbody.useGravity = !IsGrounded;
+	}
+
+	void Running () {
 		float3 move_dir3 = transform.TransformDirection(float3(move_dir.x, 0, move_dir.y));
 
 		float walk_mult = walk ? WalkMultiplier : 1;
@@ -94,14 +174,12 @@ public class Player : MonoBehaviour {
 		float3 cur_vel = Rigidbody.velocity;
 		float3 delta_v = target_vel - cur_vel; // Velocity change needed to achieve target velocity
 		
-		float max_accel = IsGrounded ? BaseAccel * walk_mult : AirControlAccel;
+		float max_accel = IsGrounded ? MaxAccel * walk_mult : AirControlAccel;
 		
 		float3 accel = delta_v / Time.fixedDeltaTime; // Acceleration needed to achieve target velocity in 1 FixedUpdate
 		
-		if (!IsGrounded) {
-			float3 grav_dir = normalizesafe(Physics.gravity);
-			accel -= grav_dir * dot(grav_dir, accel);
-		}
+		float3 cancel_dir = normalizesafe(IsGrounded ? GroundNormal : (float3)Physics.gravity);
+		accel -= cancel_dir * dot(cancel_dir, accel);
 
 		accel = normalizesafe(accel) * min(length(accel), max_accel); // Clamp Acceleration to a max which causes our velocity to not be equal to target_vel in 1 FixedUpdate, but be smoothed
 		
@@ -124,25 +202,22 @@ public class Player : MonoBehaviour {
 		//	"  jump: "+ jump +
 		//	"  IsGrounded: "+ IsGrounded
 		//	);
-
-		IsGrounded = false;
-		avgGroundNormal = 0;
 	}
 	
 	List<ContactPoint> _colls = new List<ContactPoint>();
 	void Collision (Collision collision) {
-		for (int i=0; i<collision.contactCount; ++i) {
-			var c = collision.GetContact(i);
-			_colls.Add(c);
-			
-			float ground_ang = dot(c.normal, transform.up);
-			ground_ang = acos(saturate(ground_ang)); // saturate to prevent NaN due to float error
-
-			if (ground_ang < radians(MaxGroundAngle)) {
-				avgGroundNormal += (float3)c.normal;
-				IsGrounded = true;
-			}
-		}
+		//for (int i=0; i<collision.contactCount; ++i) {
+		//	var c = collision.GetContact(i);
+		//	_colls.Add(c);
+		//	
+		//	float ground_ang = dot(c.normal, transform.up);
+		//	ground_ang = acos(saturate(ground_ang)); // saturate to prevent NaN due to float error
+		//
+		//	if (ground_ang < radians(MaxGroundAngle)) {
+		//		avgGroundNormal += (float3)c.normal;
+		//		IsGrounded = true;
+		//	}
+		//}
 	}
 	private void OnCollisionEnter (Collision collision) => Collision(collision);
 	private void OnCollisionStay (Collision collision) => Collision(collision);
@@ -150,6 +225,10 @@ public class Player : MonoBehaviour {
 	Camera ActiveCamera => (Firstperson ? FpsCamera : TpsCamera).GetComponentInChildren<Camera>();
 	
 	void LateUpdate () {
+		CapsuleCollider.height = Height - LegHeight;
+		CapsuleCollider.radius = Radius;
+		CapsuleCollider.center = float3(0, Height - CapsuleCollider.height / 2, 0);
+
 		if (Input.GetKeyDown(KeyCode.F))
 			Firstperson = !Firstperson;
 		FpsCamera.SetActive(Firstperson);
@@ -173,6 +252,8 @@ public class Player : MonoBehaviour {
 	}
 
 	private void OnDrawGizmos () {
+		Legs(true);
+
 		foreach (var c in _colls) {
 			Gizmos.color = Color.red;
 			Gizmos.DrawWireSphere(c.point, 0.05f);
