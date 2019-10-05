@@ -13,22 +13,21 @@ public class Player : MonoBehaviour {
 	public CapsuleCollider	CapsuleCollider;
 	public Rigidbody		Rigidbody;
 	
-	float3 vel = 0;
+	float3 target_vel = 0;
 
 	float3 pos => transform.position;
 	quaternion ori => transform.rotation;
 
 	bool IsGrounded = false;
-	bool IsWalking => IsGrounded && length(vel) > 0.1f;
+	bool IsWalking => IsGrounded && length(target_vel) > 0.1f;
 	
 	public float MaxSpeed = 4f;
 	public float SprintMultiplier = 1.8f;
 
-	public float MaxAccel = 20f;
+	public float MaxAccel = 200f;
+	public float AirControlAccel = 15f;
 
 	public float JumpForce = 10f;
-	[Range(0f, 1f)]
-	public float AirControlFraction = 0.1f;
 
 	public float TerminalVel = 40;
 
@@ -44,18 +43,30 @@ public class Player : MonoBehaviour {
 		return f * accel;
 	}
 
+	float3 _delta_v, _accel;
+	
+	bool sprint = false;
+
 	private void FixedUpdate () {
+		// NOTE: using IsGrounded from Collision checks of prev frame, ie. 1 frane lag, solution would be to use LateFixedUpdate but that does not exist
 		Rigidbody.useGravity = !IsGrounded;
 		
-		float control = 1f;
-		if (!IsGrounded)
-			control *= AirControlFraction;
+		float max_accel = IsGrounded ? MaxAccel * (sprint ? SprintMultiplier : 1f) : AirControlAccel;
 
-		float3 accel = (vel - (float3)Rigidbody.velocity) * MaxAccel * control;
-		accel = normalizesafe(accel) * min(length(accel), MaxAccel * control);
+		float3 delta_v = target_vel - (float3)Rigidbody.velocity; // Velocity change needed to achieve target velocity
+		float3 accel = delta_v / Time.fixedDeltaTime; // Acceleration needed to achieve target velocity in 1 FixedUpdate
+		
+		float3 grav_dir = normalizesafe(Physics.gravity);
+		accel -= grav_dir * dot(grav_dir, accel);
+
+		accel = normalizesafe(accel) * min(length(accel), max_accel); // Clamp Acceleration to a max which causes our velocity to not be equal to target_vel in 1 FixedUpdate, but be smoothed
+		
 		Rigidbody.AddForce(accel, ForceMode.Acceleration);
 		
-		Debug.Log("IsGrounded: "+ IsGrounded +" pos: "+ pos +" vel: "+ (float3)Rigidbody.velocity +" accel: "+ accel);
+		_delta_v = delta_v;
+		_accel = accel;
+
+		Debug.Log("IsGrounded: "+ IsGrounded +" pos: "+ pos +" vel: "+ (float3)Rigidbody.velocity +" delta_v: "+ _delta_v +" accel: "+ _accel);
 		
 		IsGrounded = false;
 	}
@@ -79,7 +90,7 @@ public class Player : MonoBehaviour {
 
 	void Update () {
 		float dt = Time.deltaTime;
-		vel = Rigidbody.velocity;
+		this.target_vel = Rigidbody.velocity;
 		
 		if (Input.GetKeyDown(KeyCode.F))
 			Firstperson = !Firstperson;
@@ -93,7 +104,7 @@ public class Player : MonoBehaviour {
 		move_dir.x += Input.GetKey(KeyCode.D) ? 1f : 0f;
 		move_dir.z -= Input.GetKey(KeyCode.S) ? 1f : 0f;
 		move_dir.z += Input.GetKey(KeyCode.W) ? 1f : 0f;
-		bool sprint = Input.GetKey(KeyCode.LeftShift);
+		sprint = Input.GetKey(KeyCode.LeftShift);
 		bool jump = Input.GetKeyDown(KeyCode.Space);
 		bool crouch = Input.GetKey(KeyCode.LeftControl);
 		
@@ -107,14 +118,14 @@ public class Player : MonoBehaviour {
 		//if (!IsGrounded)
 		//	control *= AirControlFraction;
 		//vel = lerp(vel, float3(target_vel.x, vel.y, target_vel.z), control);
-		vel = float3(target_vel.x, vel.y, target_vel.z);
+		this.target_vel = float3(target_vel.x, 0, target_vel.z);
 		
 		//
-		float speed = length(vel);
-		float3 vel_dir = normalizesafe(vel);
+		float speed = length(this.target_vel);
+		float3 vel_dir = normalizesafe(this.target_vel);
 
 		// Drag
-		vel += normalizesafe(vel) * -Drag(length(speed)) * dt;
+		this.target_vel += normalizesafe(this.target_vel) * -Drag(length(speed)) * dt;
 		
 		//Rigidbody.velocity = vel;
 
@@ -134,6 +145,15 @@ public class Player : MonoBehaviour {
 			Gizmos.DrawLine(c.point, c.point + c.normal * 0.1f);
 		}
 		_colls.Clear();
+
+		Gizmos.color = Color.cyan;
+		Gizmos.DrawLine(pos, pos + target_vel);
+		Gizmos.color = Color.blue;
+		Gizmos.DrawLine(pos, pos + (float3)Rigidbody.velocity);
+		//Gizmos.color = Color.yellow;
+		//Gizmos.DrawLine(pos + (float3)Rigidbody.velocity, pos + (float3)Rigidbody.velocity + _delta_v);
+		Gizmos.color = Color.magenta;
+		Gizmos.DrawLine(pos + (float3)Rigidbody.velocity, pos + (float3)Rigidbody.velocity + _accel);
 	}
 
 	#region Mouselook
