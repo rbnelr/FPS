@@ -2,17 +2,27 @@
 *Ground Collisions
 *Horizontal (Walls) Collision
 *Ceiling Collision
+*Limit Walking up slopes to a max slope
+
+*Movement dynamics
+* smooth acceleration that is still responsive
 
 Spring-like reaction to hitting ground
 Smooth Stepping over small obstacles
-Limit Walking up slopes to a max slope
 
-Movement dynamics
- smooth acceleration that is still responsive
-  starting to walk
-  starting sprint
-  slowing down
+smooth acceleration that is still responsive
+ -can be improved with acceleration curves maybe
+  -180 vel changes get higher accel to make strafing tighter
+ -or maybe instead of capping acceleration to a low value (which just causes a kind of sluggish feeling) control the target velicity better
+  1. short presses of wasd while standing still should result in a small target vel for precice movement
+  2. sprint should always result in a large target vel quickly to allow fast speed up / down if desired
+  3. sprint should only allow you to go faster forwards not backwards (maybe?, unidirectionality might also be desired)
+  4. to allow quick strafing to dodge, maybe give a boost to accel when switching movement direction 180 deg
+   4.1 also allow this for forw/back movement switches ?
+   4.2 should not interfere with 1. though, an interesting approach is to literally do vel = -vel; for this "boost" or rather vel = length(vel) * new_vel_dir;
 
+
+ 
  walking up slopes slower
  reaction to running into walls?
  ground differences (slippery ice, sticky ground)
