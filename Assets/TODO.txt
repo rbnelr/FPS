@@ -33,3 +33,6 @@ Ducking
 Air Control (no air control by default, or air control if desired)
 
 Walking up stairs should have the player be constantly "Grounded" and their velocity should follow the stair slope so that jumping works normally (ie. stairs should act like a ramp even though theyre not)
+
+
+custom shader variants and graphics setting in hopes of improving performance on laptops
