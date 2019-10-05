@@ -21,11 +21,12 @@ public class Player : MonoBehaviour {
 	float3 GroundNormal;
 	bool IsWalking => IsGrounded && length(target_vel) > 0.1f;
 	
-	public float MaxSpeed = 4f;
+	public float MaxSpeed = 10f;
 	public float WalkMultiplier = 0.4f;
 
-	public float MaxAccel = 200f;
+	public float BaseAccel = 200f;
 	public float AirControlAccel = 15f;
+	public AnimationCurve AccelCurve;
 
 	public float JumpVel = 10f;
 
@@ -63,7 +64,10 @@ public class Player : MonoBehaviour {
 		//
 		float3 move_dir3 = transform.TransformDirection(float3(move_dir.x, 0, move_dir.y));
 
-		target_vel = move_dir3 * MaxSpeed * (walk ? WalkMultiplier : 1);
+		float walk_mult = walk ? WalkMultiplier : 1;
+
+		float maxSpeed = MaxSpeed * walk_mult;
+		target_vel = move_dir3 * maxSpeed;
 		
 		// frame0:
 		//   jump =  true   vel.y = 0   IsGrounded = true
@@ -87,11 +91,11 @@ public class Player : MonoBehaviour {
 			target_vel = normalizesafe(target_vel) * length(target_vel) * walk_speed;
 		}
 
-		float max_accel = IsGrounded ? MaxAccel * (walk ? WalkMultiplier : 1f) : AirControlAccel;
-
 		float3 cur_vel = Rigidbody.velocity;
-
 		float3 delta_v = target_vel - cur_vel; // Velocity change needed to achieve target velocity
+		
+		float max_accel = IsGrounded ? BaseAccel * walk_mult : AirControlAccel;
+		
 		float3 accel = delta_v / Time.fixedDeltaTime; // Acceleration needed to achieve target velocity in 1 FixedUpdate
 		
 		if (!IsGrounded) {

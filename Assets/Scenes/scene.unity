@@ -1074,12 +1074,35 @@ MonoBehaviour:
   Animator: {fileID: 341151431}
   CapsuleCollider: {fileID: 341151433}
   Rigidbody: {fileID: 341151434}
-  MaxSpeed: 8
+  MaxSpeed: 10
   WalkMultiplier: 0.4
-  MaxAccel: 90
+  BaseAccel: 90
   AirControlAccel: 10
-  JumpVel: 2
-  JumpHeldAccel: 10
+  AccelCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0.003011115
+      value: 1.5012736
+      inSlope: -3.618723
+      outSlope: -3.618723
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 1
+      outWeight: 0.055310834
+    - serializedVersion: 3
+      time: 0.7018504
+      value: 0.7140322
+      inSlope: -0.02820039
+      outSlope: -0.02820039
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 1
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  JumpVel: 5
   TerminalVel: 40
   MaxGroundAngle: 45
   GroundAngleWalkSpeed:
