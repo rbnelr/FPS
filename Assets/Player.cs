@@ -24,6 +24,8 @@ public class Player : MonoBehaviour {
 	public float MaxSpeed = 4f;
 	public float SprintMultiplier = 1.8f;
 
+	public float MaxAccel = 20f;
+
 	public float JumpForce = 10f;
 	[Range(0f, 1f)]
 	public float AirControlFraction = 0.1f;
@@ -43,8 +45,19 @@ public class Player : MonoBehaviour {
 	}
 
 	private void FixedUpdate () {
-		IsGrounded = false;
 		Rigidbody.useGravity = !IsGrounded;
+		
+		float control = 1f;
+		if (!IsGrounded)
+			control *= AirControlFraction;
+
+		float3 accel = (vel - (float3)Rigidbody.velocity) * MaxAccel * control;
+		accel = normalizesafe(accel) * min(length(accel), MaxAccel * control);
+		Rigidbody.AddForce(accel, ForceMode.Acceleration);
+		
+		Debug.Log("IsGrounded: "+ IsGrounded +" pos: "+ pos +" vel: "+ (float3)Rigidbody.velocity +" accel: "+ accel);
+		
+		IsGrounded = false;
 	}
 	
 	List<ContactPoint> _colls = new List<ContactPoint>();
@@ -58,8 +71,6 @@ public class Player : MonoBehaviour {
 
 			IsGrounded = IsGrounded || ground_ang < radians(MaxGroundAngle);
 		}
-
-		Rigidbody.useGravity = !IsGrounded;
 	}
 	private void OnCollisionEnter (Collision collision) => Collision(collision);
 	private void OnCollisionStay (Collision collision) => Collision(collision);
@@ -92,10 +103,11 @@ public class Player : MonoBehaviour {
 
 		float3 target_vel = move_dir * MaxSpeed * (sprint ? SprintMultiplier : 1);
 		
-		float control = 1f;
-		if (!IsGrounded)
-			control *= AirControlFraction;
-		vel = lerp(vel, float3(target_vel.x, vel.y, target_vel.z), control);
+		//float control = 1f;
+		//if (!IsGrounded)
+		//	control *= AirControlFraction;
+		//vel = lerp(vel, float3(target_vel.x, vel.y, target_vel.z), control);
+		vel = float3(target_vel.x, vel.y, target_vel.z);
 		
 		//
 		float speed = length(vel);
@@ -104,18 +116,12 @@ public class Player : MonoBehaviour {
 		// Drag
 		vel += normalizesafe(vel) * -Drag(length(speed)) * dt;
 		
-		Rigidbody.velocity = vel;
-
-		//float3 accel = (vel - (float3)Rigidbody.velocity) * 100f;
-		//accel = normalizesafe(accel) * min(length(accel), 100f);
-		//Rigidbody.AddForce(accel, ForceMode.Acceleration);
+		//Rigidbody.velocity = vel;
 
 		// Jumping
 		if (jump && IsGrounded) {
 			Rigidbody.AddForce(transform.up * JumpForce, ForceMode.VelocityChange);
 		}
-
-		Debug.Log("pos: "+ pos +" vel: "+ (float3)Rigidbody.velocity);
 
 		//
 		Animator.SetBool("isWalking", IsWalking);
