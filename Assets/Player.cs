@@ -28,6 +28,9 @@ public class Player : MonoBehaviour {
 	public float AirControlAccel = 15f;
 
 	public float JumpVel = 10f;
+	
+	public float Spring_K = 30f;
+	public float Spring_Damping = 0.05f;
 
 	public float TerminalVel = 40;
 
@@ -119,9 +122,7 @@ public class Player : MonoBehaviour {
 
 			//float max_spring_F = gound_too_steep ? length(Physics.gravity)/2 : 40;
 
-			float spring_k = 30f;
-			float spring_damping = 0.05f;
-			spring_F = spring_k * ground_pos + spring_damping * ground_vel / Time.fixedDeltaTime;
+			spring_F = Spring_K * ground_pos + Spring_Damping * ground_vel / Time.fixedDeltaTime;
 
 			//spring_F = min(spring_F, max_spring_F);
 
@@ -131,12 +132,12 @@ public class Player : MonoBehaviour {
 		IsGrounded = on_ground && !gound_too_steep;
 		GroundNormal = IsGrounded ? ground_normal : 0;
 		
-		Debug.Log(
-			"IsGrounded: "+ IsGrounded +
-			"  ground_pos: "+ ground_pos +
-			"  ground_vel: "+ ground_vel +
-			"  spring_F: "+ spring_F
-			);
+		//Debug.Log(
+		//	"IsGrounded: "+ IsGrounded +
+		//	"  ground_pos: "+ ground_pos +
+		//	"  ground_vel: "+ ground_vel +
+		//	"  spring_F: "+ spring_F
+		//	);
 
 		Rigidbody.useGravity = !IsGrounded;
 	}
