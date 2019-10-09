@@ -4,6 +4,7 @@ using static Unity.Mathematics.math;
 using System.Collections.Generic;
 using System.Linq;
 
+[ExecuteInEditMode]
 public class SettingsManager : MonoBehaviour {
 	[Header("Graphics Settings")]
 		
@@ -17,10 +18,10 @@ public class SettingsManager : MonoBehaviour {
 	bool prevVSync = false;
 	int prevTargetFramerate = 200;
 	bool prevPotatoMode = false;
+
+	public Material[] Materials; // Mats on which to enable potato mode
 	
 	void Start () {
-		GetMaterials();
-
 		QualitySettings.vSyncCount = VSync ? 1 : 0;
 		Application.targetFrameRate = TargetFramerate;
 		SetPotatoMode(PotatoMode);
@@ -42,34 +43,28 @@ public class SettingsManager : MonoBehaviour {
 		prevPotatoMode = PotatoMode;
 	}
 
-	void OnDestroy () {
-		ResetPotatoMode();
-	}
-
-	Material[] mats;
-	Shader standardShader, potatoShader, standartRoughnessShader;
-
-	Dictionary<Material, Shader> originalShaders = new Dictionary<Material, Shader>();
-
-	void GetMaterials () {
-		mats = Resources.LoadAll<Material>("Asset");
-		standardShader = Shader.Find("Standard");
-		potatoShader = Shader.Find("Custom/PotatoModeShader");
-		standartRoughnessShader = Shader.Find("Custom/StandartRoughness");
-
-		originalShaders = mats.ToDictionary(x => x, x => x.shader);
-	}
-
 	void SetPotatoMode (bool on) {
-		foreach (var m in originalShaders) {
-			m.Key.shader = on ? potatoShader : m.Value;
-		}
-	}
+		//foreach (var m in Materials) {
+		//	m.SetKeyword("DIRECTIONAL", !on);
+		//	m.SetKeyword("LIGHTMAP_ON", !on);
+		//}
 
-	
-	void ResetPotatoMode () {
-		foreach (var m in originalShaders) {
-			m.Key.shader = m.Value;
-		}
+		ShaderExt.SetKeyword("POTATO_MODE", on);
 	}
 }
+
+public static class ShaderExt {
+	public static void SetKeyword (string keyword, bool state) {
+		if (state)
+			Shader.EnableKeyword(keyword);
+		else
+			Shader.DisableKeyword(keyword);
+	}
+	public static void SetKeyword (this Material m, string keyword, bool state) {
+		if (state)
+			m.EnableKeyword(keyword);
+		else
+			m.DisableKeyword(keyword);
+	}
+}
+
