@@ -61,6 +61,10 @@ public class Player : MonoBehaviour {
 	
 	float3 _accel = 0;
 
+	private void Start () {
+		Animator = GetComponentInChildren<Animator>();
+	}
+
 	private void FixedUpdate () {
 
 		Legs();
