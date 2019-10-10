@@ -1480,9 +1480,12 @@ MonoBehaviour:
   CapsuleCollider: {fileID: 341151433}
   Rigidbody: {fileID: 341151434}
   SpineBone: {fileID: 0}
+  ChestBone: {fileID: 0}
+  NeckBone: {fileID: 0}
+  HeadBone: {fileID: 0}
   MouselookSensitiviy: 0.055
-  LookDownLimit: 5
-  LookUpLimit: 5
+  LookDownLimit: 0
+  LookUpLimit: 0
   MouselookActive: 0
   MouselookAng:
     x: 2.2137482
