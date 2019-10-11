@@ -4,6 +4,7 @@ using static Unity.Mathematics.math;
 using System.Linq;
 using System.Collections.Generic;
 using System.Globalization;
+using System;
 
 public class Player : MonoBehaviour {
 
@@ -13,31 +14,39 @@ public class Player : MonoBehaviour {
 	public Animator			Animator;
 	public CapsuleCollider	CapsuleCollider;
 	public Rigidbody		Rigidbody;
-	public Transform		SpineBone;
-	public Transform		ChestBone;
-	public Transform		NeckBone;
-	public Transform		HeadBone;
 
-	Quaternion		GunBaseOri;
-	Quaternion		SpineBaseOri;
-	Quaternion		ChestBaseOri;
-	Quaternion		NeckBaseOri ;
-	Quaternion		HeadBaseOri ;
+	[Serializable]
+	public class ControlledBone {
+		public GameObject	Bone;
+		public Quaternion	BaseOri;
+		public float		ChainWeight;
+		public bool			FlipDirection;
+	}
+	
+	public ControlledBone[] LookYBoneChain;
+
+	Transform LegLBone;
+	Transform LegRBone;
+
+	Quaternion LegLBaseOri;
+	Quaternion LegRBaseOri;
+
+	Quaternion GunBaseOri;
 	
 	bool Firstperson = true;
 
 	private void Start () {
 		Animator = GetComponentInChildren<Animator>();
 		
-		SpineBone = transform.Find("solider/Armature/Hips/Spine");
-		ChestBone = SpineBone.Find("Chest");
-		NeckBone = ChestBone.Find("Neck");
-		HeadBone = NeckBone.Find("Head");
+		LegLBone = transform.Find("solider/Armature/Hips/UpperLeg.L");
+		LegRBone = transform.Find("solider/Armature/Hips/UpperLeg.R");
+		
+		LegLBaseOri = LegLBone.transform.localRotation;
+		LegRBaseOri = LegRBone.transform.localRotation;
 
-		SpineBaseOri = SpineBone.localRotation;
-		ChestBaseOri = ChestBone.localRotation;
-		NeckBaseOri  = NeckBone .localRotation;
-		HeadBaseOri  = HeadBone .localRotation;
+		foreach (var b in LookYBoneChain) {
+			b.BaseOri = b.Bone.transform.localRotation;
+		}
 
 		GunBaseOri = Gun.transform.localRotation;
 	}
@@ -93,10 +102,18 @@ public class Player : MonoBehaviour {
 			Gun		 .transform.localRotation = GunBaseOri * Quaternion.AngleAxis(MouselookAng.y * 3f/5, Vector3.right);
 			FpsCamera.transform.localEulerAngles = float3(MouselookAng.y * 1f/5, 0, 0);
 			
-			SpineBone.localRotation = Quaternion.AngleAxis(MouselookAng.y * +1f/5, Vector3.right) * SpineBaseOri;
-			ChestBone.localRotation = Quaternion.AngleAxis(MouselookAng.y * +1f/5, Vector3.right) * ChestBaseOri;
-			NeckBone .localRotation = Quaternion.AngleAxis(MouselookAng.y * -1f/5, Vector3.right) * NeckBaseOri;
-			HeadBone .localRotation = Quaternion.AngleAxis(MouselookAng.y * -1f/5, Vector3.right) * HeadBaseOri;
+			float totalWeight = LookYBoneChain.Sum(x => x.ChainWeight);
+
+			foreach (var b in LookYBoneChain) {
+				var rot = Quaternion.AngleAxis(MouselookAng.y * (b.FlipDirection ? -1f : +1f) * b.ChainWeight / totalWeight, Vector3.right);
+
+				b.Bone.transform.localRotation = rot * b.BaseOri;
+				if (b.Bone.name == "Hips") {
+
+					LegLBone.localRotation = inverse(rot) * LegLBaseOri;
+					LegRBone.localRotation = inverse(rot) * LegRBaseOri;
+				}
+			}
 		}
 	}
 	#endregion
