@@ -68,7 +68,7 @@ public class Player : MonoBehaviour {
 			MouselookAng.y = clamp(MouselookAng.y, -90 + LookDownLimit, +90 - LookUpLimit);
 			
 			//
-			transform.localEulerAngles			 = float3(0, MouselookAng.x, 0);
+			transform.localEulerAngles = float3(0, MouselookAng.x, 0);
 
 			Gun		 .transform.localRotation = Quaternion.AngleAxis(MouselookAng.y, Vector3.right);
 			FpsCamera.transform.position = EyesCenter.transform.position;
