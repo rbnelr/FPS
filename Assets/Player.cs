@@ -9,17 +9,17 @@ using System;
 public class Player : MonoBehaviour {
 
 	public Gun				Gun;
+	public Transform		GunStockPos;
 	public GameObject		FpsCamera;
 	public GameObject		TpsCamera;
-	public Animator			Animator;
 	public CapsuleCollider	CapsuleCollider;
 	public Rigidbody		Rigidbody;
+	public SoldierAnim		SoldierAnim;
 	
 	bool Firstperson = true;
 	
 	Camera ActiveCamera => (Firstperson ? FpsCamera : TpsCamera).GetComponentInChildren<Camera>();
-	bool IsWalking => Input.GetKey(KeyCode.W);
-
+	
 	void LateUpdate () {
 		if (Input.GetKeyDown(KeyCode.F))
 			Firstperson = !Firstperson;
@@ -29,7 +29,9 @@ public class Player : MonoBehaviour {
 		Mouselook();
 		
 		//
-		Animator.SetBool("isWalking", IsWalking);
+		Gun.transform.position = GunStockPos.position;
+		SoldierAnim.IsWalking = Input.GetKey(KeyCode.W);
+		SoldierAnim.TorsoAngle = Gun.TorsoAngle;
 	}
 
 	private void OnDrawGizmos () {
@@ -74,27 +76,4 @@ public class Player : MonoBehaviour {
 		}
 	}
 	#endregion
-
-	private void OnAnimatorIK (int layerIndex) {
-		Animator.SetLookAtWeight(1);
-		Animator.SetLookAtPosition(LookAt.transform.position);
-		
-		SetIKTarget(AvatarIKGoal.RightHand, RHand.transform, 1);
-		SetIKTarget(AvatarIKHint.RightElbow, RElbow.transform, 1);
-		SetIKTarget(AvatarIKGoal.LeftHand, LHand.transform, 1);
-		SetIKTarget(AvatarIKHint.LeftElbow, LElbow.transform, 1);
-
-	}
-
-	void SetIKTarget (AvatarIKGoal target, Transform t, float weight) {
-		Animator.SetIKPositionWeight(target, weight);
-		Animator.SetIKPosition(target, t.position);
-		
-		Animator.SetIKRotationWeight(target, weight);
-		Animator.SetIKRotation(target, t.rotation);
-	}
-	void SetIKTarget (AvatarIKHint target, Transform t, float weight) {
-		Animator.SetIKHintPositionWeight(target, weight);
-		Animator.SetIKHintPosition(target, t.position);
-	}
 }
