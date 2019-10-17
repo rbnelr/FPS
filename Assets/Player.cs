@@ -20,7 +20,7 @@ public class Player : MonoBehaviour {
 	
 	Camera ActiveCamera => (Firstperson ? FpsCamera : TpsCamera).GetComponentInChildren<Camera>();
 	
-	void LateUpdate () {
+	void Update () {
 		if (Input.GetKeyDown(KeyCode.F))
 			Firstperson = !Firstperson;
 		FpsCamera.SetActive(Firstperson);
